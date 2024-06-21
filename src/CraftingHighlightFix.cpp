@@ -33,7 +33,7 @@ RVA <uintptr_t> ApplyImageSpaceShader_Check ({
     { RUNTIME_VERSION_1_10_50, 0x00BEBA23 },
     { RUNTIME_VERSION_1_10_40, 0x00BEB963 },
     { RUNTIME_VERSION_1_10_26, 0x00BEA013 },
-}, "74 1A 8B 83 ? ? ? ? 85 C0");
+}, "74 1A 8B ? 30 03 00 00 85 C0");
 
 RVA <uintptr_t> PowerArmorModMenu_StartHighlight_Check ({
     { RUNTIME_VERSION_1_10_75, 0x00BA3491 },
@@ -41,7 +41,7 @@ RVA <uintptr_t> PowerArmorModMenu_StartHighlight_Check ({
     { RUNTIME_VERSION_1_10_50, 0x00BA30B1 },
     { RUNTIME_VERSION_1_10_40, 0x00BA30B1 },
     { RUNTIME_VERSION_1_10_26, 0x00BA1761 },
-}, "FF 52 20 48 85 C0 74 17", 0x6);
+}, "FF 52 20 48 8B F0 48 85 C0 0F 84 ? ? ? ?", 0x9);
 
 RVA <uintptr_t> InventoryMenu_SetEffectType ({
     { RUNTIME_VERSION_1_10_75, 0x00B09D59 },
@@ -49,7 +49,7 @@ RVA <uintptr_t> InventoryMenu_SetEffectType ({
     { RUNTIME_VERSION_1_10_50, 0x00B09D59 },
     { RUNTIME_VERSION_1_10_40, 0x00B09D59 },
     { RUNTIME_VERSION_1_10_26, 0x00B09D49 },
-}, "BA ? ? ? ? 48 8B CB E8 ? ? ? ? B2 01");    // mov edx, 5
+}, "BA 05 00 00 00 48 8B CB E8 ? ? ? ? B2 01");    // mov edx, 5
 
 RVA <float> ShaderBurstAmount ({
     { RUNTIME_VERSION_1_10_75, 0x0675A710 },
@@ -57,7 +57,8 @@ RVA <float> ShaderBurstAmount ({
     { RUNTIME_VERSION_1_10_50, 0x06759710 },
     { RUNTIME_VERSION_1_10_40, 0x0675B710 },
     { RUNTIME_VERSION_1_10_26, 0x0673FA00 },
-}, "F3 0F 10 15 ? ? ? ? 48 8D 05 ? ? ? ? 48 8D 3D ? ? ? ?", 0, 4, 8);   // movss xmm2, ShaderBurstAmount
+    { RUNTIME_VERSION_1_10_984, 0x03CA3C88 },
+}, "48 0F 45 F8 48 8B 43 30 BA 01 00 00 00 F3 0F 10", 0x15, 4, 8);   // movss xmm2, ShaderBurstAmount
 
 // Member Functions
 RVA_DEFINE_FUNCTION(GFxValue::ObjectInterface, SetMember,
@@ -171,9 +172,11 @@ void ApplyPatches() {
     iRobotWorkbenchShaderMode = Settings::GetInt("iRobotWorkbenchShaderMode:Main", 0);
 
     if (iPowerArmorShaderMode == 0) {
-        SafeWrite8(PowerArmorModMenu_StartHighlight_Check.GetUIntPtr(), 0xEB);  // JMP
+        //SafeWrite8(PowerArmorModMenu_StartHighlight_Check.GetUIntPtr(), 0xEB);  // JMP
+        SafeWrite16(PowerArmorModMenu_StartHighlight_Check.GetUIntPtr(), 0xE990);  // JMP
     } else {
-        SafeWrite8(PowerArmorModMenu_StartHighlight_Check.GetUIntPtr(), 0x74);  // JZ (original)
+        //SafeWrite8(PowerArmorModMenu_StartHighlight_Check.GetUIntPtr(), 0x74);  // JZ (original)
+        SafeWrite16(PowerArmorModMenu_StartHighlight_Check.GetUIntPtr(), 0x840F);  // JZ (original)
     }
 }
 
@@ -210,7 +213,78 @@ bool RegisterScaleform(GFxMovieView* view, GFxValue* f4se_root) {
 extern "C"
 {
 
-bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
+__declspec(dllexport) F4SEPluginVersionData F4SEPlugin_Version =
+{
+	F4SEPluginVersionData::kVersion,
+
+	PLUGIN_VERSION,
+	PLUGIN_NAME_SHORT,
+	"reg2k",
+
+	0,
+	F4SEPluginVersionData::kStructureIndependence_1_10_980Layout,
+	{ SUPPORTED_RUNTIME_VERSION, 0 },
+
+	0,
+};
+
+//bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
+//{
+//    char logPath[MAX_PATH];
+//    sprintf_s(logPath, sizeof(logPath), "\\My Games\\Fallout4\\F4SE\\%s.log", PLUGIN_NAME_SHORT);
+//    gLog.OpenRelative(CSIDL_MYDOCUMENTS, logPath);
+//
+//    _MESSAGE("%s v%s", PLUGIN_NAME_SHORT, PLUGIN_VERSION_STRING);
+//
+//    // Populate info structure
+//    info->infoVersion = PluginInfo::kInfoVersion;
+//    info->name    = PLUGIN_NAME_SHORT;
+//    info->version = PLUGIN_VERSION;
+//
+//    // Store plugin handle
+//    g_pluginHandle = f4se->GetPluginHandle();
+//
+//    // Check game version
+//    if (!COMPATIBLE(f4se->runtimeVersion)) {
+//        char str[512];
+//        sprintf_s(str, sizeof(str), "Your game version: v%d.%d.%d.%d\nExpected version: v%d.%d.%d.%d\n%s will be disabled.",
+//            GET_EXE_VERSION_MAJOR(f4se->runtimeVersion),
+//            GET_EXE_VERSION_MINOR(f4se->runtimeVersion),
+//            GET_EXE_VERSION_BUILD(f4se->runtimeVersion),
+//            GET_EXE_VERSION_SUB(f4se->runtimeVersion),
+//            GET_EXE_VERSION_MAJOR(SUPPORTED_RUNTIME_VERSION),
+//            GET_EXE_VERSION_MINOR(SUPPORTED_RUNTIME_VERSION),
+//            GET_EXE_VERSION_BUILD(SUPPORTED_RUNTIME_VERSION),
+//            GET_EXE_VERSION_SUB(SUPPORTED_RUNTIME_VERSION),
+//            PLUGIN_NAME_LONG
+//        );
+//
+//        MessageBox(NULL, str, PLUGIN_NAME_LONG, MB_OK | MB_ICONEXCLAMATION);
+//        return false;
+//    }
+//
+//    if (f4se->runtimeVersion != SUPPORTED_RUNTIME_VERSION) {
+//        _MESSAGE("INFO: Game version (%08X). Target (%08X).", f4se->runtimeVersion, SUPPORTED_RUNTIME_VERSION);
+//    }
+//
+//    // Get the scaleform interface
+//    g_scaleform = (F4SEScaleformInterface *)f4se->QueryInterface(kInterface_Scaleform);
+//    if (!g_scaleform) {
+//        _MESSAGE("couldn't get scaleform interface");
+//        return false;
+//    }
+//
+//    // Get the messaging interface
+//    g_messaging = (F4SEMessagingInterface *)f4se->QueryInterface(kInterface_Messaging);
+//    if (!g_messaging) {
+//        _MESSAGE("couldn't get messaging interface");
+//        return false;
+//    }
+//
+//    return true;
+//}
+
+bool F4SEPlugin_Load(const F4SEInterface *f4se)
 {
     char logPath[MAX_PATH];
     sprintf_s(logPath, sizeof(logPath), "\\My Games\\Fallout4\\F4SE\\%s.log", PLUGIN_NAME_SHORT);
@@ -218,57 +292,22 @@ bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
 
     _MESSAGE("%s v%s", PLUGIN_NAME_SHORT, PLUGIN_VERSION_STRING);
 
-    // Populate info structure
-    info->infoVersion = PluginInfo::kInfoVersion;
-    info->name    = PLUGIN_NAME_SHORT;
-    info->version = PLUGIN_VERSION;
-
     // Store plugin handle
     g_pluginHandle = f4se->GetPluginHandle();
 
-    // Check game version
-    if (!COMPATIBLE(f4se->runtimeVersion)) {
-        char str[512];
-        sprintf_s(str, sizeof(str), "Your game version: v%d.%d.%d.%d\nExpected version: v%d.%d.%d.%d\n%s will be disabled.",
-            GET_EXE_VERSION_MAJOR(f4se->runtimeVersion),
-            GET_EXE_VERSION_MINOR(f4se->runtimeVersion),
-            GET_EXE_VERSION_BUILD(f4se->runtimeVersion),
-            GET_EXE_VERSION_SUB(f4se->runtimeVersion),
-            GET_EXE_VERSION_MAJOR(SUPPORTED_RUNTIME_VERSION),
-            GET_EXE_VERSION_MINOR(SUPPORTED_RUNTIME_VERSION),
-            GET_EXE_VERSION_BUILD(SUPPORTED_RUNTIME_VERSION),
-            GET_EXE_VERSION_SUB(SUPPORTED_RUNTIME_VERSION),
-            PLUGIN_NAME_LONG
-        );
-
-        MessageBox(NULL, str, PLUGIN_NAME_LONG, MB_OK | MB_ICONEXCLAMATION);
-        return false;
-    }
-
-    if (f4se->runtimeVersion != SUPPORTED_RUNTIME_VERSION) {
-        _MESSAGE("INFO: Game version (%08X). Target (%08X).", f4se->runtimeVersion, SUPPORTED_RUNTIME_VERSION);
-    }
-
     // Get the scaleform interface
-    g_scaleform = (F4SEScaleformInterface *)f4se->QueryInterface(kInterface_Scaleform);
+    g_scaleform = (F4SEScaleformInterface*)f4se->QueryInterface(kInterface_Scaleform);
     if (!g_scaleform) {
         _MESSAGE("couldn't get scaleform interface");
         return false;
     }
 
     // Get the messaging interface
-    g_messaging = (F4SEMessagingInterface *)f4se->QueryInterface(kInterface_Messaging);
+    g_messaging = (F4SEMessagingInterface*)f4se->QueryInterface(kInterface_Messaging);
     if (!g_messaging) {
         _MESSAGE("couldn't get messaging interface");
         return false;
     }
-
-    return true;
-}
-
-bool F4SEPlugin_Load(const F4SEInterface *f4se)
-{
-    _MESSAGE("%s load", PLUGIN_NAME_SHORT);
 
     G::Init();
     RVAManager::UpdateAddresses(f4se->runtimeVersion);
